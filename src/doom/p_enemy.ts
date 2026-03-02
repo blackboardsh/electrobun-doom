@@ -9,6 +9,8 @@ export function A_Look(actor: MapObject): void {
   const doomstat = require("./doomstat");
   const player = doomstat.players[doomstat.consoleplayer];
   if (player && player.mo && player.mo.health > 0) {
+    const { P_CheckSight } = require("./p_sight");
+    if (!P_CheckSight(actor, player.mo)) return;
     actor.target = player.mo;
     const { P_SetMobjState } = require("./p_mobj");
     if (actor.info.seestate) {
@@ -28,7 +30,10 @@ export function A_Chase(actor: MapObject): void {
   const target = actor.target;
   if (!target) return;
 
-  const { pointToAngle2, finecosine, finesine, FINEMASK, ANGLETOFINESHIFT, fixedMul } = require("./tables");
+  const { pointToAngle2, finecosine, finesine, FINEMASK, ANGLETOFINESHIFT, fixedMul, ANG90 } = require("./tables");
+  const { P_AproxDistance } = require("./p_maputl");
+  const { P_CheckSight } = require("./p_sight");
+  const { P_TryMove } = require("./p_map");
   const angle = pointToAngle2(actor.x, actor.y, target.x, target.y);
   actor.angle = angle;
 
@@ -36,8 +41,42 @@ export function A_Chase(actor: MapObject): void {
   if (speed <= 0) return;
 
   const fine = (angle >>> ANGLETOFINESHIFT) & FINEMASK;
-  actor.momx = fixedMul(speed, finecosine[fine]);
-  actor.momy = fixedMul(speed, finesine[fine]);
+  let dx = fixedMul(speed, finecosine[fine]);
+  let dy = fixedMul(speed, finesine[fine]);
+
+  // Try to move toward target; if blocked, try simple sidestep
+  let moved = P_TryMove(actor, actor.x + dx, actor.y + dy);
+  if (!moved) {
+    const alt1 = ((angle + ANG90) >>> 0);
+    const fine1 = (alt1 >>> ANGLETOFINESHIFT) & FINEMASK;
+    dx = fixedMul(speed, finecosine[fine1]);
+    dy = fixedMul(speed, finesine[fine1]);
+    moved = P_TryMove(actor, actor.x + dx, actor.y + dy);
+  }
+  if (!moved) {
+    const alt2 = ((angle - ANG90) >>> 0);
+    const fine2 = (alt2 >>> ANGLETOFINESHIFT) & FINEMASK;
+    dx = fixedMul(speed, finecosine[fine2]);
+    dy = fixedMul(speed, finesine[fine2]);
+    moved = P_TryMove(actor, actor.x + dx, actor.y + dy);
+  }
+  if (!moved) {
+    dx = 0; dy = 0;
+  }
+
+  actor.momx = dx;
+  actor.momy = dy;
+
+  // Simple attack decision
+  if (actor.info.missilestate) {
+    const dist = P_AproxDistance(actor.x - target.x, actor.y - target.y);
+    if (dist < 256 * FRACUNIT && P_CheckSight(actor, target)) {
+      if ((P_Random() & 3) === 0) {
+        const { P_SetMobjState } = require("./p_mobj");
+        P_SetMobjState(actor, actor.info.missilestate);
+      }
+    }
+  }
 
   if (actor.movecount <= 0) {
     actor.movecount = P_Random() & 15;
@@ -53,6 +92,13 @@ export function A_FaceTarget(actor: MapObject): void {
 
 export function A_PosAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 512 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 16 * 64 * FRACUNIT);
   const damage = (P_Random() % 5 + 1) * 3;
@@ -60,6 +106,13 @@ export function A_PosAttack(actor: MapObject): void {
 }
 export function A_SPosAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 512 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 16 * 64 * FRACUNIT);
   const damage = (P_Random() % 5 + 1) * 3;
@@ -67,6 +120,13 @@ export function A_SPosAttack(actor: MapObject): void {
 }
 export function A_CPosAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 512 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 16 * 64 * FRACUNIT);
   const damage = (P_Random() % 5 + 1) * 3;
@@ -75,6 +135,13 @@ export function A_CPosAttack(actor: MapObject): void {
 export function A_CPosRefire(actor: MapObject): void {}
 export function A_TroopAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 768 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 16 * 64 * FRACUNIT);
   const damage = (P_Random() % 8 + 1) * 3;
@@ -82,6 +149,13 @@ export function A_TroopAttack(actor: MapObject): void {
 }
 export function A_SargAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 256 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 64 * FRACUNIT);
   const damage = (P_Random() % 10 + 1) * 4;
@@ -89,6 +163,13 @@ export function A_SargAttack(actor: MapObject): void {
 }
 export function A_HeadAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 768 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 16 * 64 * FRACUNIT);
   const damage = (P_Random() % 8 + 1) * 3;
@@ -96,6 +177,13 @@ export function A_HeadAttack(actor: MapObject): void {
 }
 export function A_CyberAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 1024 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 16 * 64 * FRACUNIT);
   const damage = (P_Random() % 8 + 1) * 5;
@@ -103,6 +191,13 @@ export function A_CyberAttack(actor: MapObject): void {
 }
 export function A_BruisAttack(actor: MapObject): void {
   A_FaceTarget(actor);
+  if (!actor.target) return;
+  const { P_CheckSight } = require("./p_sight");
+  if (!P_CheckSight(actor, actor.target)) return;
+  const { P_AproxDistance } = require("./p_maputl");
+  const dist = P_AproxDistance(actor.x - actor.target.x, actor.y - actor.target.y);
+  if (dist > 768 * FRACUNIT) return;
+  try { console.log(`[ATK] type=${actor.type} dist=${(dist/FRACUNIT).toFixed(1)} pos=(${(actor.x/FRACUNIT).toFixed(1)},${(actor.y/FRACUNIT).toFixed(1)})`); } catch {}
   const { P_AimLineAttack, P_LineAttack } = require("./p_map");
   const slope = P_AimLineAttack(actor, actor.angle, 16 * 64 * FRACUNIT);
   const damage = (P_Random() % 8 + 1) * 4;

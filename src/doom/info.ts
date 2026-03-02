@@ -3538,14 +3538,26 @@ export function P_PatchActions(): void {
   // === Enemy AI wiring (simplified) ===
   // Only apply to monsters (MF_COUNTKILL), not the player.
   const { MF_COUNTKILL } = require("./doomdata");
+  function wireStateChain(startState: number, fn: any, maxSteps = 32) {
+    let st = startState;
+    const seen = new Set<number>();
+    let steps = 0;
+    while (st && !seen.has(st) && steps < maxSteps) {
+      seen.add(st);
+      setAction(st, fn);
+      const next = states[st]?.nextstate ?? 0;
+      st = next;
+      steps++;
+    }
+  }
   for (let i = 0; i < mobjinfo.length; i++) {
     const info = mobjinfo[i]!;
     if (!info) continue;
     if (!(info.flags & MF_COUNTKILL)) continue;
 
-    if (info.spawnstate && info.seestate) setAction(info.spawnstate, A_Look);
-    if (info.seestate) setAction(info.seestate, A_Chase);
-    if (info.painstate) setAction(info.painstate, A_Pain);
+    if (info.spawnstate) wireStateChain(info.spawnstate, A_Look);
+    if (info.seestate) wireStateChain(info.seestate, A_Chase);
+    if (info.painstate) wireStateChain(info.painstate, A_Pain, 8);
     if (info.deathstate) setAction(info.deathstate, A_Fall);
     if (info.xdeathstate) setAction(info.xdeathstate, A_Fall);
   }
@@ -3569,6 +3581,7 @@ export function P_PatchActions(): void {
     if (!attack) continue;
     if (!(info.flags & MF_COUNTKILL)) continue;
 
+    // Only fire on the first frame of the attack state
     if (info.meleestate) setAction(info.meleestate, attack);
     if (info.missilestate) setAction(info.missilestate, attack);
   }

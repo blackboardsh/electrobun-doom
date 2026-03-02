@@ -36,12 +36,21 @@ export function P_TryMove(thing: MapObject, x: number, y: number): boolean {
   }
 
   const result = P_CheckPosition(thing, x, y);
-  if (!result) return false;
+  if (!result) {
+    try {
+      const playerMo = doomstat.players[doomstat.consoleplayer]?.mo;
+      if (thing === playerMo) {
+        console.log(`[BLOCK] P_CheckPosition failed at x=${(x/FRACUNIT).toFixed(1)} y=${(y/FRACUNIT).toFixed(1)}`);
+      }
+    } catch {}
+    return false;
+  }
 
   // Check height
   if (tmceilingz - tmfloorz < thing.height) return false;
   if (tmceilingz - thing.z < thing.height) return false;
-  if (tmfloorz - thing.z > 24 * FRACUNIT) return false; // too high step
+  // Allow stepping up to 32 units (match Doom's standard step height)
+  if (tmfloorz - thing.z > 32 * FRACUNIT) return false; // too high step
 
   // Move the thing
   const { P_UnsetMobjPosition, P_SetMobjPosition } = require("./p_mobj");
@@ -115,6 +124,14 @@ function PIT_CheckThing(thing: MapObject): boolean {
   if (!tmthing) return true;
   if (!(thing.flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE))) return true;
   if (thing === tmthing) return true;
+  // Corpses should never block movement
+  if (thing.flags & 0x4000) { // MF_CORPSE
+    return true;
+  }
+  // Dead things should never block movement
+  if (thing.health <= 0) {
+    return true;
+  }
 
   const blockdist = thing.radius + tmthing.radius;
   if (Math.abs(thing.x - tmx) >= blockdist || Math.abs(thing.y - tmy) >= blockdist) {
@@ -146,6 +163,14 @@ function PIT_CheckThing(thing: MapObject): boolean {
 
   // Solid thing blocking
   if (thing.flags & MF_SOLID) {
+    // Debug: log what is blocking the player
+    const doomstat = require("./doomstat");
+    const playerMo = doomstat.players[doomstat.consoleplayer]?.mo;
+    if (tmthing === playerMo) {
+      try {
+        console.log(`[BLOCK] blocked by type=${thing.type} ${thing.info?.name ?? "unknown"} flags=0x${thing.flags.toString(16)} health=${thing.health} corpse=${(thing.flags & 0x4000) ? 1 : 0}`);
+      } catch {}
+    }
     return false; // blocked
   }
 
@@ -154,6 +179,14 @@ function PIT_CheckThing(thing: MapObject): boolean {
 
 function PIT_CheckLine(ld: Line): boolean {
   if (!tmthing) return true;
+  const doomstat = require("./doomstat");
+  const playerMo = doomstat.players[doomstat.consoleplayer]?.mo;
+
+  // If the moving box is entirely on one side, it can't cross this line
+  const { P_BoxOnLineSide } = require("./p_maputl");
+  if (P_BoxOnLineSide(tmbbox, ld) !== -1) {
+    return true;
+  }
 
   if (tmbbox[BOXRIGHT]! <= ld.bbox[BOXLEFT]! ||
       tmbbox[BOXLEFT]! >= ld.bbox[BOXRIGHT]! ||
@@ -163,17 +196,43 @@ function PIT_CheckLine(ld: Line): boolean {
   }
 
   if (ld.sidenum[1] === -1) {
+    if (tmthing === playerMo) {
+      try { console.log(`[BLOCK-LINE] one-sided line id=${doomstat.lines.indexOf(ld)}`); } catch {}
+    }
     return false; // one sided line
   }
 
-  if (ld.flags & ML_BLOCKING) return false;
+  if (ld.flags & ML_BLOCKING) {
+    if (tmthing === playerMo) {
+      try { console.log(`[BLOCK-LINE] ML_BLOCKING line id=${doomstat.lines.indexOf(ld)}`); } catch {}
+    }
+    return false;
+  }
   if (!tmthing.player && (ld.flags & ML_BLOCKMONSTERS)) return false;
 
   P_LineOpening(ld);
 
-  if (openrange < tmthing.height) return false;
-  if (opentop - tmthing.z < tmthing.height) return false;
-  if (openbottom - tmthing.z > 24 * FRACUNIT) return false;
+  if (openrange < tmthing.height) {
+    if (tmthing === playerMo) {
+      try { console.log(`[BLOCK-LINE] openrange too small line id=${doomstat.lines.indexOf(ld)}`); } catch {}
+    }
+    return false;
+  }
+  if (opentop - tmthing.z < tmthing.height) {
+    if (tmthing === playerMo) {
+      try { console.log(`[BLOCK-LINE] opentop too low line id=${doomstat.lines.indexOf(ld)}`); } catch {}
+    }
+    return false;
+  }
+  // Allow stepping up to 32 units (match Doom's standard step height)
+  if (openbottom - tmthing.z > 32 * FRACUNIT) {
+    if (tmthing === playerMo) {
+      try {
+        console.log(`[BLOCK-LINE] step too high line id=${doomstat.lines.indexOf(ld)} openbottom=${openbottom} z=${tmthing.z} diff=${openbottom - tmthing.z}`);
+      } catch {}
+    }
+    return false;
+  }
 
   if (opentop < tmceilingz) {
     tmceilingz = opentop;

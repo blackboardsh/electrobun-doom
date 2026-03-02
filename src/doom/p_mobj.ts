@@ -160,6 +160,24 @@ export function P_MobjThinker(thinkerOrMobj: any): void {
 	// P_RunThinkers passes the thinker object; get the owning mobj
 	const mobj: MapObject = thinkerOrMobj.owner ?? thinkerOrMobj;
 
+	// Corpses should not block movement
+	const { MF_CORPSE, MF_SOLID, MF_COUNTKILL } = require("./doomdata");
+	if (mobj.flags & MF_CORPSE) {
+		mobj.flags &= ~MF_SOLID;
+	}
+
+	// Ensure monsters acquire a target and enter seestate
+	if ((mobj.flags & MF_COUNTKILL) && mobj.health > 0 && !mobj.target) {
+		const doomstat = require("./doomstat");
+		const player = doomstat.players[doomstat.consoleplayer];
+		if (player && player.mo) {
+			mobj.target = player.mo;
+			if (mobj.info.seestate && mobj.state !== mobj.info.seestate) {
+				P_SetMobjState(mobj, mobj.info.seestate);
+			}
+		}
+	}
+
 	// Momentum movement
 	if (mobj.momx || mobj.momy) {
 		P_XYMovement(mobj);

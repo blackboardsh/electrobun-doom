@@ -219,6 +219,18 @@ export function P_DamageMobj(target: MapObject, inflictor: MapObject | null, sou
   if (!(target.flags & MF_SHOOTABLE)) return;
   if (target.health <= 0) return;
 
+  // Debug: log attacks on the player to identify "invisible" damage sources
+  if (target.player) {
+    try {
+      const srcType = source?.type ?? inflictor?.type ?? -1;
+      const srcName = source?.info?.name ?? inflictor?.info?.name ?? "unknown";
+      const dx = (source?.x ?? inflictor?.x ?? 0) - target.x;
+      const dy = (source?.y ?? inflictor?.y ?? 0) - target.y;
+      const dist = Math.hypot(dx / 65536, dy / 65536);
+      console.log(`[DMG] player hit by type=${srcType} ${srcName} dmg=${damage} dist=${dist.toFixed(1)}`);
+    } catch {}
+  }
+
   // Armor absorption
   if (target.player && target.player.armortype) {
     let saved = 0;
@@ -241,6 +253,7 @@ export function P_DamageMobj(target: MapObject, inflictor: MapObject | null, sou
   target.health -= damage;
 
   if (target.player) {
+    if (target.health < 0) target.health = 0;
     target.player.health = target.health;
     target.player.damagecount += damage;
     if (target.player.damagecount > 100) target.player.damagecount = 100;

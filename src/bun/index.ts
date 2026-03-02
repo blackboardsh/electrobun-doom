@@ -69,8 +69,8 @@ const launcherWindow = new BrowserWindow({
 	frame: {
 		width: 700,
 		height: 500,
-		x: 200,
-		y: 150,
+		x: 800,
+		y: 350,
 	},
 	rpc: launcherRPC,
 });

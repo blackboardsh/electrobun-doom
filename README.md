@@ -4,12 +4,12 @@ This repo demonstrates **two DOOM implementations inside Electrobun** to showcas
 
 It’s intentionally pragmatic: a real game rendering in a **native GPU window** (no webview) and a second implementation in **pure TypeScript**. Both are playable; the C version is fully functional, and the TypeScript port is playable but still a work in progress.
 
-Thanks to Electrobun’s packaging and update system, the shipped **.dmg is 29.5MB**, and updates can be **as small as 4KB** when rolling out new features.
+> Thanks to Electrobun’s batteries-included packaging and differential update system, the shipped **.dmg (containing both implementations) is only 29.5MB**, and updates can be **as small as 4KB** when rolling out new features.
+> <details><img width="740" height="540" alt="Screenshot 2026-03-02 at 10 34 50 AM" src="https://github.com/user-attachments/assets/0e7b463e-adde-4836-8721-707d132cb806" /></details>
 
-Project home:
-```
-https://github.com/blackboardsh/electrobun
-```
+**Project home**: https://github.com/blackboardsh/electrobun
+
+
 
 ## What This Demo Shows
 

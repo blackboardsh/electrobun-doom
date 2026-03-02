@@ -30,7 +30,7 @@ export function P_CheckSight(t1: MapObject, t2: MapObject): boolean {
 
   const crossesBlockingLine = (ld: Line): boolean => {
     // Only consider blocking or one-sided lines for LOS
-    if (!(ld.flags & ML_BLOCKING) && ld.sidenum[1] !== -1) return false;
+    if (ld.sidenum[1] !== -1) return false;
 
     // Quick bbox reject
     if (maxx <= ld.bbox[2] || minx >= ld.bbox[3] || maxy <= ld.bbox[1] || miny >= ld.bbox[0]) {

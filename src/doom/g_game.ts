@@ -187,6 +187,7 @@ function G_PlayerThink(player: any): void {
   // Use button
   if (cmd.buttons & BT_USE) {
     if (!player.usedown) {
+      try { console.log("[INPUT] use"); } catch {}
       const { P_UseLines } = require("./p_map");
       P_UseLines(player);
       player.usedown = 1;

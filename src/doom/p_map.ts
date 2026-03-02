@@ -212,7 +212,7 @@ function PIT_CheckLine(ld: Line): boolean {
 
   P_LineOpening(ld);
 
-  if (openrange < tmthing.height) {
+  if (openrange < tmthing.height && !(tmthing as any).player) {
     if (tmthing === playerMo) {
       try { console.log(`[BLOCK-LINE] openrange too small line id=${doomstat.lines.indexOf(ld)}`); } catch {}
     }
@@ -220,7 +220,7 @@ function PIT_CheckLine(ld: Line): boolean {
   }
   if (opentop - tmthing.z < tmthing.height) {
     if (tmthing === playerMo) {
-      try { console.log(`[BLOCK-LINE] opentop too low line id=${doomstat.lines.indexOf(ld)}`); } catch {}
+      try { console.log(`[BLOCK-LINE] opentop too low line id=${doomstat.lines.indexOf(ld)} special=${ld.special}`); } catch {}
     }
     return false;
   }
@@ -261,6 +261,7 @@ const USERANGE = 64 * FRACUNIT;
 export function P_UseLines(player: Player): void {
   const mo = player.mo;
   if (!mo) return;
+  const doomstat = require("./doomstat");
 
   const { finesine, finecosine, fixedMul, FINEMASK, ANGLETOFINESHIFT } = require("./tables");
   const angle = mo.angle >>> ANGLETOFINESHIFT;
@@ -271,35 +272,74 @@ export function P_UseLines(player: Player): void {
   const y2 = y1 + fixedMul(USERANGE, finesine[angle & FINEMASK]);
 
   // Simple approach: check blockmap lines in a box from player to use point
-  // and find the closest special line
+  // and find the closest special line in front of the player
   let bestDist = USERANGE + 1;
   let bestLine: any = null;
   let bestSide = 0;
+  let anyDist = USERANGE + 1;
+  let anyLine: any = null;
+  let anySide = 0;
 
   const minx = Math.min(x1, x2) - FRACUNIT;
   const maxx = Math.max(x1, x2) + FRACUNIT;
   const miny = Math.min(y1, y2) - FRACUNIT;
   const maxy = Math.max(y1, y2) + FRACUNIT;
 
-  const bxl = ((minx - ds.bmaporgx) >> FRACBITS) >> 7;
-  const bxh = ((maxx - ds.bmaporgx) >> FRACBITS) >> 7;
-  const byl = ((miny - ds.bmaporgy) >> FRACBITS) >> 7;
-  const byh = ((maxy - ds.bmaporgy) >> FRACBITS) >> 7;
+  const bxl = Math.max(0, ((minx - ds.bmaporgx) >> FRACBITS) >> 7);
+  const bxh = Math.min(ds.bmapwidth - 1, ((maxx - ds.bmaporgx) >> FRACBITS) >> 7);
+  const byl = Math.max(0, ((miny - ds.bmaporgy) >> FRACBITS) >> 7);
+  const byh = Math.min(ds.bmapheight - 1, ((maxy - ds.bmaporgy) >> FRACBITS) >> 7);
+
+  const viewdx = finecosine[angle & FINEMASK];
+  const viewdy = finesine[angle & FINEMASK];
+
+  function distToLine(ld: Line): number {
+    const x1l = ld.v1.x;
+    const y1l = ld.v1.y;
+    const x2l = ld.v2.x;
+    const y2l = ld.v2.y;
+
+    const px = mo.x;
+    const py = mo.y;
+
+    const dx = x2l - x1l;
+    const dy = y2l - y1l;
+    const len2 = (dx * dx + dy * dy);
+    if (len2 === 0) return P_AproxDistance(px - x1l, py - y1l);
+
+    // project point onto segment
+    const t = Math.max(0, Math.min(1, ((px - x1l) * dx + (py - y1l) * dy) / len2));
+    const projx = x1l + dx * t;
+    const projy = y1l + dy * t;
+    return P_AproxDistance(px - projx, py - projy);
+  }
 
   for (let bx = bxl; bx <= bxh; bx++) {
     for (let by = byl; by <= byh; by++) {
       P_BlockLinesIterator(bx, by, (ld: Line) => {
         if (!ld.special) return true;
 
-        // Check if player is on front side
+        // If one-sided, only use from front side
         const side = P_PointOnLineSide(mo.x, mo.y, ld);
+        if (ld.sidenum[1] === -1 && side !== 0) return true;
 
-        // Check distance to line
-        const dist = P_AproxDistance(
-          ld.v1.x + (ld.dx >> 1) - mo.x,
-          ld.v1.y + (ld.dy >> 1) - mo.y
-        );
-        if (dist < bestDist) {
+        // In front of player?
+        const midx = ld.v1.x + (ld.dx >> 1);
+        const midy = ld.v1.y + (ld.dy >> 1);
+        const toLineX = midx - mo.x;
+        const toLineY = midy - mo.y;
+        const dot = fixedMul(toLineX, viewdx) + fixedMul(toLineY, viewdy);
+        const dist = distToLine(ld);
+
+        if (dist <= USERANGE && dist < anyDist) {
+          anyDist = dist;
+          anyLine = ld;
+          anySide = side;
+        }
+
+        if (dot <= 0) return true;
+
+        if (dist <= USERANGE && dist < bestDist) {
           bestDist = dist;
           bestLine = ld;
           bestSide = side;
@@ -309,9 +349,58 @@ export function P_UseLines(player: Player): void {
     }
   }
 
-  if (bestLine && bestLine.special) {
+  if (!bestLine && anyLine) {
+    try {
+      console.log(`[USE] closest special line id=${doomstat.lines.indexOf(anyLine)} special=${anyLine.special} dist=${(anyDist/FRACUNIT).toFixed(1)}`);
+    } catch {}
+  }
+
+  // Use only blockmap-derived candidates (fallback scan removed)
+  const lineToUse = bestLine ?? anyLine;
+  const sideToUse = bestLine ? bestSide : anySide;
+  const distToUse = bestLine ? bestDist : anyDist;
+
+  let finalLine = lineToUse;
+  let finalSide = sideToUse;
+  let finalDist = distToUse;
+
+  // Fallback: scan all lines for nearest special within range
+  if (!finalLine || !finalLine.special) {
+    let bestAllDist = USERANGE + 1;
+    let bestAllLine: Line | null = null;
+    let bestAllSide = 0;
+    for (let i = 0; i < doomstat.numlines; i++) {
+      const ld = doomstat.lines[i]!;
+      if (!ld || !ld.special) continue;
+      const side = P_PointOnLineSide(mo.x, mo.y, ld);
+      if (ld.sidenum[1] === -1 && side !== 0) continue;
+      const dist = distToLine(ld);
+      if (dist <= USERANGE && dist < bestAllDist) {
+        bestAllDist = dist;
+        bestAllLine = ld;
+        bestAllSide = side;
+      }
+    }
+    if (bestAllLine) {
+      finalLine = bestAllLine;
+      finalSide = bestAllSide;
+      finalDist = bestAllDist;
+      try {
+        console.log(`[USE] fallback line id=${doomstat.lines.indexOf(finalLine)} special=${finalLine.special} dist=${(finalDist/FRACUNIT).toFixed(1)}`);
+      } catch {}
+    }
+  }
+
+  if (finalLine && finalLine.special) {
+    try {
+      console.log(`[USE] line id=${doomstat.lines.indexOf(finalLine)} special=${finalLine.special} side=${finalSide} dist=${(finalDist/FRACUNIT).toFixed(1)}`);
+    } catch {}
     const { P_UseSpecialLine } = require("./p_spec");
-    P_UseSpecialLine(mo, bestLine, bestSide);
+    P_UseSpecialLine(mo, finalLine, finalSide);
+  } else {
+    try {
+      console.log("[USE] no special line found");
+    } catch {}
   }
 }
 

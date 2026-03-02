@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electrobun Doom</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="title">ELECTROBUN DOOM</h1>
+            <p class="subtitle">Choose your engine. Choose your fate.</p>
+        </header>
+
+        <div class="buttons">
+            <button id="btn-ts-doom" class="launch-card">
+                <div class="card-icon">TS</div>
+                <div class="card-title">TypeScript Doom</div>
+                <div class="card-desc">Pure TypeScript Doom renderer running in a webview. The entire game engine is implemented in TS.</div>
+            </button>
+
+            <button id="btn-native-doom" class="launch-card">
+                <div class="card-icon">C</div>
+                <div class="card-title">Native C Doom</div>
+                <div class="card-desc">Native C Doom engine compiled and rendered natively via Electrobun's native layer.</div>
+            </button>
+        </div>
+
+        <div id="error-banner" class="error-banner hidden"></div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>

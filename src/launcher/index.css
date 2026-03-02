@@ -1,0 +1,122 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: "Courier New", Courier, monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    text-align: center;
+    padding: 3rem 2rem;
+    max-width: 720px;
+    width: 100%;
+}
+
+/* ---- Title ---- */
+.title {
+    font-size: 3.4rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #e94560;
+    text-shadow:
+        0 0 8px rgba(233, 69, 96, 0.7),
+        0 0 30px rgba(233, 69, 96, 0.4),
+        0 4px 0 #16213e;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 1rem;
+    color: #8888aa;
+    margin-bottom: 3rem;
+    letter-spacing: 0.08em;
+}
+
+/* ---- Button grid ---- */
+.buttons {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.launch-card {
+    background: #16213e;
+    border: 2px solid #0f3460;
+    border-radius: 12px;
+    padding: 2rem 1.8rem;
+    width: 280px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    color: #eee;
+    font-family: inherit;
+    font-size: inherit;
+    outline: none;
+}
+
+.launch-card:hover {
+    border-color: #e94560;
+    background: #1a2744;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(233, 69, 96, 0.25);
+}
+
+.launch-card:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.card-icon {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #e94560;
+    background: #0f3460;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    letter-spacing: 0;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.card-desc {
+    font-size: 0.8rem;
+    color: #8888aa;
+    line-height: 1.5;
+}
+
+/* ---- Error banner ---- */
+.error-banner {
+    margin-top: 2rem;
+    padding: 0.8rem 1.2rem;
+    background: rgba(233, 69, 96, 0.15);
+    border: 1px solid #e94560;
+    border-radius: 8px;
+    color: #e94560;
+    font-size: 0.85rem;
+}
+
+.error-banner.hidden {
+    display: none;
+}

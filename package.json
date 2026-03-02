@@ -1,0 +1,19 @@
+{
+	"name": "electrobun-doom",
+	"version": "1.0.0",
+	"type": "module",
+	"description": "Doom running on Electrobun — TypeScript engine port + native C dylib, both rendering via wgpu",
+	"scripts": {
+		"start": "electrobun dev",
+		"dev": "electrobun dev --watch",
+		"build:canary": "electrobun build --env=canary",
+		"build:native": "make -C native"
+	},
+	"dependencies": {
+		"electrobun": "file:../electrobun/package"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5.7.2"
+	}
+}

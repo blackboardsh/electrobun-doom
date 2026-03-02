@@ -22,15 +22,12 @@ export default {
 			"native/libdoom.dylib": "native/libdoom.dylib",
 		},
 		mac: {
-			bundleCEF: true,
 			bundleWGPU: true,
 		},
 		linux: {
-			bundleCEF: true,
 			bundleWGPU: true,
 		},
 		win: {
-			bundleCEF: true,
 			bundleWGPU: true,
 		},
 	},

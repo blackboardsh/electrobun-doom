@@ -9,7 +9,7 @@ It’s intentionally pragmatic: a real game rendering in a **native GPU window**
 
 **Project home**: https://github.com/blackboardsh/electrobun
 
-
+**Video Demo**: https://x.com/YoavCodes/status/2028499038148903239
 
 ## What This Demo Shows
 
